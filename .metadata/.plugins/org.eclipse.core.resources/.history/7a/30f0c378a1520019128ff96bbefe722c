@@ -1,0 +1,61 @@
+package com.bridgelabz.fundoonotes.model;
+
+import java.util.Arrays;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Lob;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "Images")
+public class Image {
+	
+
+	@Id
+	@GeneratedValue
+	@Column(name = "ImageId")
+	private int imageId;
+	
+	public int getImageId() {
+		return imageId;
+	}
+
+	public Image setImageId(int imageId) {
+		this.imageId = imageId;
+	}
+	
+	@Column(name = "NoteId")
+	private int noteId;
+	
+	public int getNoteId() {
+		return noteId;
+	}
+
+	public void setNoteId(int noteId) {
+		this.noteId = noteId;
+	}
+	
+	@Lob
+	@Column(name = "Images")
+	private  byte[] image;
+ 
+
+	public byte[] getImage() {
+		return image;
+	}
+
+	public void setImages(byte[] image) {
+		this.image = image;
+	}
+
+	@Override
+	public String toString() {
+		return "Image [imageId=" + imageId + ", noteId=" + noteId + ", images=" + Arrays.toString(image) + "]";
+	}
+	
+	
+
+}

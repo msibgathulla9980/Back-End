@@ -1,0 +1,49 @@
+package com.bridgelabz.fundoonotes.service;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.web.multipart.MultipartFile;
+
+import com.bridgelabz.fundoonotes.model.UserDetails;
+
+public interface UserService {
+	
+
+void register(UserDetails user,HttpServletRequest request);
+
+UserDetails activateUser(String token, HttpServletRequest request);
+
+String login(UserDetails user, HttpServletRequest request, HttpServletResponse response);
+
+UserDetails update(String token, UserDetails existinguser, HttpServletRequest request);
+
+UserDetails delete(String token,HttpServletRequest request);
+
+UserDetails forgotPassword(UserDetails user, HttpServletRequest request);
+
+UserDetails resetPassword(UserDetails user, String token, HttpServletRequest request);
+
+UserDetails retrieveUser(String token,HttpServletRequest request);
+
+	//UserDetails fileUpload(String token,MultipartFile file, HttpServletRequest request) throws IOException;
+
+boolean store(MultipartFile file, String token, HttpServletRequest request) throws IOException;
+
+UserDetails getFile(String token, HttpServletRequest request);
+
+UserDetails deleteFile(String token, HttpServletRequest request);
+
+UserDetails verifyEmail(String token,String emailId,HttpServletRequest request);
+
+UserDetails getCollaboratedUser(int userId);
+
+List<UserDetails> allUsers(HttpServletRequest request);
+
+
+
+}

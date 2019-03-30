@@ -1,0 +1,206 @@
+package com.bridgelabz.fundoonotes.service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.bridgelabz.fundoonotes.dao.LabelRepository;
+import com.bridgelabz.fundoonotes.dao.NoteRepository;
+import com.bridgelabz.fundoonotes.model.Label;
+import com.bridgelabz.fundoonotes.model.Note;
+import com.bridgelabz.fundoonotes.utility.*;
+
+
+@Service
+public class NoteServiceImpl implements NoteService {
+
+	@Autowired
+	private TokenGenerator generateToken;
+
+	@Autowired
+	private NoteRepository noteRepository;
+
+
+	@Autowired
+	private LabelRepository labelRepository;
+
+	public List<Note> createNote(String token, Note note, HttpServletRequest request) 
+
+	{
+		int id=generateToken.verifyToken(token);
+		note.setUserId(id);
+		noteRepository.save(note);
+		List<Note> notes = noteRepository.findAll();
+		return notes;
+	}
+
+	@Override
+	public List<Note> retrieveNote(String token, HttpServletRequest request) {
+		
+		List<Note> notes = noteRepository.findAll();
+
+		if (!notes.isEmpty()) {
+
+			return notes;
+		}
+		return null;
+	}
+	@Override
+	public Note updateNote(String token,int noteId, Note note, HttpServletRequest request) {
+		int userId = generateToken.verifyToken(token);
+		Optional<Note> maybeNote = noteRepository.findByUserIdAndNoteId(userId, noteId);	
+		//List<Note> notes = noteRepository.findAllByUserIdNoteIdAndIsArchive(userId, true);
+		return maybeNote
+				.map(existingNote -> noteRepository
+						.save(existingNote.setTitle(note.getTitle()).setDescription(note.getDescription())
+								.setArchive(note.isArchive()).setInTrash(note.isInTrash()).setPinned(note.isPinned())).setColor(note.getColor()))
+				.orElseGet(() -> null);
+	}		
+	//
+	//	@Override
+	//	public Note updateNote(String token, int noteId, Note note, HttpServletRequest request) {
+	//			int userId = generateToken.verifyToken(token);
+	//			System.out.println(note.getNoteId());
+	//			Optional<Note> maybeNote = noteRepository.findByUserIdAndNoteId(userId, noteId);
+	//			return maybeNote.map(existingNote -> {
+	//				existingNote.setTitle(note.getTitle())
+	//				.setDescription(note.getDescription())
+	//				.setArchive(note.isArchive()).setInTrash(note.isInTrash()).setPinned(note.isPinned());	
+	//			
+	//			return noteRepository.save(existingNote);
+	//}).orElseThrow(() -> new NotFoundError("Note not found"));
+	//
+	//		}
+	//	if (optional.isPresent()) {
+	//	Note newNote = optional.get();
+	//	
+	//	if (newNote.getUserId() == userId) {
+	//		Note updatedNote = newNoteUpdate(newNote, note);
+	//		noteRepository.save(updatedNote);
+	//		return updatedNote;
+	//	}
+	//}
+	//return null;
+
+
+	//	public Note newNoteUpdate(Note newNote, Note note) {
+	//		if (note.getTitle() != null)
+	//			newNote.setTitle(note.getTitle());
+	//		if (note.getDescription() != null)
+	//			newNote.setDescription(note.getDescription());
+	//		if (note.isArchive() != false)
+	//			newNote.setArchive(note.isArchive());
+	//		if (note.isPinned() != false)
+	//			newNote.setPinned(note.isPinned());
+	//		if (note.isInTrash() != false)
+	//			newNote.setInTrash(note.isInTrash());
+	//		return newNote;
+	//	}
+
+
+	@Override
+	public Note deleteNote(String token, int noteId, HttpServletRequest request) {
+		int userId = generateToken.verifyToken(token);
+		Optional<Note> optional = noteRepository.findBynoteId(noteId);
+		if (optional.isPresent()) {
+			Note newNote = optional.get();
+
+			if (newNote.getUserId() == userId) {
+				noteRepository.delete(newNote);
+				return newNote;
+			}	
+		}
+		return null;
+	}
+
+
+	@Override
+	public Label createLabel(String token, Label label, HttpServletRequest request) {
+		int userId = generateToken.verifyToken(token);
+		label.setUserId(userId);
+		labelRepository.save(label);
+		return label;
+	}
+
+	@Override
+	public List<Label> retrieveLabel(String token, HttpServletRequest request) {
+		int userId = generateToken.verifyToken(token);
+		List<Label> labels = labelRepository.findByUserId(userId);
+		if (!labels.isEmpty()) {
+			return labels;
+		}
+		return null;
+	}
+
+
+	@Override
+	public Label updateLabel(String token, int labelId, Label label, HttpServletRequest request) {
+		int userId = generateToken.verifyToken(token);
+		Optional<Label> optional = labelRepository.findById(labelId);
+		if (optional.isPresent()) {
+			Label newLabel = optional.get();
+			if (newLabel.getUserId() == userId) {
+				if (label.getLabelName() != null)
+					newLabel.setLabelName(label.getLabelName());
+				labelRepository.save(newLabel);
+				return newLabel;
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public Label deleteLabel(String token, int labelId, HttpServletRequest request) {
+		int userId = generateToken.verifyToken(token);
+		Optional<Label> optional = labelRepository.findById(labelId);
+		if (optional.isPresent()) {
+			Label newLabel = optional.get();
+			if (newLabel.getUserId() == userId)
+				labelRepository.delete(newLabel);
+			return newLabel;
+		}
+		return null;
+	}
+
+
+	public boolean addNoteByLabel(int noteId, Label labelNew, HttpServletRequest request) {
+		Note note = noteRepository.findByNoteId(noteId);
+		Label label = labelRepository.findByLabelId(labelNew.getLabelId());
+		if(note!=null && label!=null) {
+			List<Label> labels = note.getLabels();
+			labels.add(label);
+			note.setLabels(labels);
+			noteRepository.save(note);
+			return true;	
+		}
+		return false;	
+
+	}
+
+	@Override
+	public boolean removeNoteByLabel(int noteId, int labelId, HttpServletRequest request) {
+
+		Note note = noteRepository.findByNoteId(noteId);
+		Label label = labelRepository.findByLabelId(labelId);
+		if (note!=null && label!=null) {
+			List<Label> labels = note.getLabels();
+			if(!labels.isEmpty()) {
+				labels=labels.stream().filter(newLabel -> newLabel.getLabelId() != labelId)
+						.collect(Collectors.toList());
+				note.setLabels(labels);
+				noteRepository.save(note);
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
+
+
+
+

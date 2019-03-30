@@ -1,0 +1,17 @@
+1550475014867	Rename package 'com.bridgelabz.fundoonotes'
+1550475035328	Rename package 'com.bridgelabz.user'
+1550557999213	Delete element
+1550558300431	Rename type 'UserValidation'
+1550558315593	Rename type 'Validation'
+1550561306895	Rename type 'UserValidation'
+1550898806795	Change method 'register'
+1550899107602	Extract method 'getEmailMsgTemplate'
+1550899177339	Rename local variable 'link'
+1550899189388	Rename local variable 'registrationTemplate'
+1550899252134	Rename method 'getEmailMsgTemplate'
+1550899392619	Rename local variable 'optional'
+1550899761427	Rename local variable 'existinguser'
+1550900521663	Rename local variable 'optional'
+1550900815432	Rename local variable 'userNew'
+1550900838986	Rename local variable 'userDetail'
+1550922414284	Copy package

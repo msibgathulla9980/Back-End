@@ -1,0 +1,205 @@
+package com.bridgelabz.fundoonotes.service;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.bridgelabz.fundoonotes.dao.UserDetailsRepository;
+import com.bridgelabz.fundoonotes.exception.NotFoundError;
+import com.bridgelabz.fundoonotes.model.UserDetails;
+import com.bridgelabz.fundoonotes.utility.EmailUtil;
+import com.bridgelabz.fundoonotes.utility.TokenGenerator;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+	private static final String BASE_URL = "http://localhost:8083/user";
+
+	@Autowired
+	private UserDetailsRepository userDetailsRepository;
+
+	@Autowired
+	private PasswordEncoder bcryptEncoder;
+
+	@Autowired
+	private EmailUtil email;
+
+	@Autowired
+	private TokenGenerator generateToken;
+
+	private static Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
+	@Override
+	public void register(UserDetails user, HttpServletRequest request) {
+		user.setPassword(bcryptEncoder.encode(user.getPassword()));
+		userDetailsRepository.save(user);
+		String token = generateToken.generateToken(String.valueOf(user.getId()));
+		String registrationLink = getRegistrationLink(token);
+		log.info(registrationLink);
+		email.sendEmail("msibgathulla@gmail.com", "Registration Mail", registrationLink);
+	}
+
+	private String getRegistrationLink(String token) {
+		return " Please click the link below to verify. \n\n" + BASE_URL + "/activationstatus/" + token
+				+ "\n\nRegards,\nMohammed Sibgathulla.";
+	}
+
+	@Override
+	public UserDetails activateUser(String token, HttpServletRequest request) {
+		int id = generateToken.verifyToken(token);
+		Optional<UserDetails> maybeUser = userDetailsRepository.findById(id);
+		return maybeUser
+				.map(user -> userDetailsRepository.save(user.setActivationStatus(true)))
+				.orElseGet(() -> null);
+	}
+
+	@Override
+	public String login(UserDetails user, HttpServletRequest request, HttpServletResponse response) {
+		String token = null;
+		UserDetails existingUser = userDetailsRepository.findByemailId(user.getEmailId());
+		if (existingUser != null) {
+			if (bcryptEncoder.matches(user.getPassword(), existingUser.getPassword())
+					&& existingUser.isActivationStatus()) {
+				token = generateToken.generateToken(String.valueOf(existingUser.getId()));
+				log.info(token);
+			}
+		}
+		return token;
+	}
+
+	@Override
+	public UserDetails update(String token, UserDetails user, HttpServletRequest request) {
+
+		int id = generateToken.verifyToken(token);
+		Optional<UserDetails> maybeUser = userDetailsRepository.findById(id);
+		return maybeUser.map(existingUser -> {
+
+			existingUser.setEmailId(user.getEmailId())
+			.setPassword(bcryptEncoder.encode(existingUser.getPassword()))
+			.setMobileNumber(user.getMobileNumber());
+
+			return userDetailsRepository.save(existingUser);
+		}).orElseThrow(() -> new NotFoundError("User Not Found"));
+
+	}
+
+	@Override
+	public UserDetails delete(String token, HttpServletRequest request) {
+		int id = generateToken.verifyToken(token);
+		Optional<UserDetails> maybeUser = userDetailsRepository.findById(id);
+
+		if (maybeUser.isPresent()) {
+			
+			UserDetails userNew = maybeUser.get();
+		userDetailsRepository.deleteAll();
+		return userNew;	
+		}
+		return null;
+
+	}
+
+	@Override
+	public UserDetails forgotPassword(UserDetails user, HttpServletRequest request) {
+		// UserDetails user=userDao.login(emailId);
+		UserDetails newUser = userDetailsRepository.findByemailId(user.getEmailId());
+
+		if (newUser != null) {
+			String token = generateToken.generateToken(String.valueOf(newUser.getId()));
+			String forgotPasswordLink = "Please click on the link below to reset your password.\n\nhttp://localhost:4200/resetpassword/"
+					+ token + "\n\n\nRegards,\nMohammed Sibgathulla.";
+			email.sendEmail("msibgathulla@gmail.com", "Password reset link", forgotPasswordLink);
+			return newUser;
+		}
+		return null;
+
+	}
+
+	@Override
+	public UserDetails resetPassword(UserDetails user, String token, HttpServletRequest request) {
+
+		int userId = generateToken.verifyToken(token);
+		Optional<UserDetails> optional = userDetailsRepository.findById(userId);
+		if (optional.isPresent()) {
+			UserDetails newUser = optional.get();
+			if (newUser != null) {
+				newUser.setPassword(bcryptEncoder.encode(user.getPassword()));
+				userDetailsRepository.save(newUser);
+				return newUser;
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public UserDetails retrieveUser(String token, HttpServletRequest request) {
+		int id = generateToken.verifyToken(token);
+		UserDetails user = userDetailsRepository.findUserById(id);
+		
+		if(user!=null) {
+			
+			return user;
+		}	
+		return null;
+	}
+
+//	public UserDetails fileUpload(String token, MultipartFile file , HttpServletRequest request) throws IOException {
+//		
+//		int userId=generateToken.verifyToken(token);
+//		UserDetails user=userDetailsRepository.findUserById(userId);
+//		if(user!=null) {
+//			byte[] blob=file.getBytes();
+//			user.setImage(blob);
+//			userDetailsRepository.save(user);
+//		}
+//		return user;
+//		
+//	}
+		@Override
+		public boolean store(MultipartFile file, String token, HttpServletRequest request) throws IOException {
+			int userId=generateToken.verifyToken(token);
+			UserDetails user = userDetailsRepository.findUserById(userId);
+			byte[] image = file.getBytes();
+			if (image.length > 0) {
+				user.setImage(image);
+				userDetailsRepository.save(user);
+				return true;
+			}
+			return false;
+//				return user;
+				
+		}
+
+		@Override
+		public UserDetails getFile(String token, HttpServletRequest request) {
+			int id = generateToken.verifyToken(token);
+			UserDetails user = userDetailsRepository.findUserById(id);
+			
+			if(user!=null) {
+				
+				return user;
+			}	
+			return null;
+		}
+
+		@Override
+		public UserDetails deleteFile(String token, HttpServletRequest request) {
+			UserDetails user = userDetailsRepository.findById(generateToken.verifyToken(token)).get();
+		
+		userDetailsRepository.save(user.setImage(null));
+		return user;
+	
+
+}
+}

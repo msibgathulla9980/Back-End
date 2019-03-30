@@ -1,0 +1,47 @@
+package com.bridgelabz.fundoonotes.service;
+
+import java.io.IOException;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.web.multipart.MultipartFile;
+
+import com.bridgelabz.fundoonotes.model.Label;
+import com.bridgelabz.fundoonotes.model.Note;
+
+
+public interface NoteService {
+
+List<Note> createNote(String token,Note usernote, HttpServletRequest request);
+
+	List<Note> retrieveNote(String token,HttpServletRequest request);
+
+	Note updateNote(String token, int noteId, Note note,  HttpServletRequest request);
+
+	Note deleteNote(String token, int noteId, HttpServletRequest request);
+
+
+	Label createLabel(String token, Label label, HttpServletRequest request);
+	
+	List<Label> retrieveLabel(String token, HttpServletRequest request);
+	
+	Label updateLabel(String token, int labelId, Label label, HttpServletRequest request);
+
+	Label deleteLabel(String token, int labelId, HttpServletRequest request);
+	
+	boolean addNoteByLabel( int noteId, Label label, HttpServletRequest request);
+	
+	boolean removeNoteByLabel(int noteId, int labelId, HttpServletRequest request);
+
+    boolean createCollaborator(String token,int noteId, int userId);
+	
+	boolean removeCollaborator(int userId,int noteId);
+	
+	boolean store(MultipartFile file, String token, HttpServletRequest request) throws IOException;
+
+	Note getFile(String token, HttpServletRequest request);
+
+	Note deleteFile(String token, HttpServletRequest request);
+
+}
