@@ -9,7 +9,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 
-
 @SuppressWarnings("deprecation")
 @Configuration
 @ComponentScan("com.bridgelabz.fundoonotes")

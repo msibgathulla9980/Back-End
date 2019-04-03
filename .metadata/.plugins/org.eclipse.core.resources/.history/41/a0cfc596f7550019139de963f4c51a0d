@@ -1,0 +1,223 @@
+package com.bridgelabz.fundoonotes.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import java.io.IOException;
+import java.util.List;
+
+import javax.servlet.http.HttpServletResponse;
+ 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;	
+
+
+
+import javax.servlet.http.HttpServletRequest;
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.Validator;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import com.bridgelabz.fundoonotes.model.UserDetails;
+import com.bridgelabz.fundoonotes.service.UserService;
+
+@Controller
+@RequestMapping("/user")
+public class UserController {
+
+	@Autowired
+	@Qualifier("userValidator")
+	private Validator validator;
+
+	@InitBinder()
+	private void initBinder(WebDataBinder binder) {
+		binder.setValidator(validator);
+	}
+
+	@Autowired
+	private UserService userService;
+
+	@PostMapping(value = "/register")
+	public ResponseEntity<?> register(@Validated @RequestBody UserDetails user, HttpServletRequest request,
+			BindingResult bindingResult) {
+		if (bindingResult.hasErrors()) {
+			return new ResponseEntity<String>("Invalid entry!!! Please enter valid details", HttpStatus.NOT_FOUND);
+		}
+		userService.register(user, request);
+		
+		return new ResponseEntity<String>("User Registered Successfully", HttpStatus.OK);
+
+	}
+
+	@PostMapping(value = "/login")
+	public ResponseEntity<?> login(@RequestBody UserDetails user, HttpServletRequest request,
+			HttpServletResponse response) {
+
+		String token = userService.login(user, request, response);
+		if (token != null) {
+			response.setHeader("token", token);
+			return new ResponseEntity<Void>(HttpStatus.OK);
+
+		}
+
+		return new ResponseEntity<String>("User not found by the given Email Id", HttpStatus.NOT_FOUND);
+
+	}
+
+	@PutMapping(value = "/update")
+	public ResponseEntity<String> update(@RequestHeader("token") String token, @RequestBody UserDetails existinguser,
+			HttpServletRequest request) {
+		UserDetails userDetails = userService.update(token, existinguser, request);
+
+		if (userDetails != null) {
+			return new ResponseEntity<String>("User Successfully Updated", HttpStatus.OK);
+		} else
+
+			return new ResponseEntity<String>("EmailId or password are incorrect, Please provide correct details",
+					HttpStatus.CONFLICT);
+
+	}
+
+	@DeleteMapping(value = "/delete")
+	public ResponseEntity<String> delete(@RequestHeader("token") String token, HttpServletRequest request) {
+
+		UserDetails userDetails = userService.delete(token, request);
+
+		if (userDetails != null)
+
+			return new ResponseEntity<String>("User Succesfully deleted", HttpStatus.FOUND);
+
+		else
+			return new ResponseEntity<String>("User not Found by given  Id", HttpStatus.NOT_FOUND);
+
+	}
+
+	@GetMapping(value = "/activationstatus/{token:.+}")
+	public ResponseEntity<String> activateUser(@PathVariable String token, HttpServletRequest request) {
+
+		UserDetails user = userService.activateUser(token, request);
+
+		if (user != null) {
+
+			return new ResponseEntity<String>("User has been activated successfully", HttpStatus.FOUND);
+		} else {
+
+			return new ResponseEntity<String>("Email incorrect. Please enter valid email address present in database",
+					HttpStatus.NOT_FOUND);
+		}
+
+	}
+
+	@PostMapping(value = "/forgotpassword")
+	public ResponseEntity<?> forgotPassword(@RequestBody UserDetails user, HttpServletRequest request) {
+
+		UserDetails newUSer = userService.forgotPassword(user, request);
+		if (newUSer != null) {
+			
+			return new ResponseEntity<Void>(HttpStatus.OK);
+
+		}
+
+		return new ResponseEntity<String>("You've Entered a invalid email, Please enter the valid email",
+				HttpStatus.NOT_FOUND);
+
+	}
+
+	@PutMapping(value = "/resetpassword/{token:.+}")
+	public ResponseEntity<?> resetPassword(@RequestBody UserDetails user, @PathVariable("token") String token,
+			HttpServletRequest request) {
+		UserDetails resetuser = userService.resetPassword(user, token, request);
+		if (resetuser != null)
+
+			return new ResponseEntity<Void>(HttpStatus.OK);
+
+		return new ResponseEntity<String>("Could not reset your password ", HttpStatus.CONFLICT);
+
+	}
+	
+	@GetMapping(value = "retrieveuser")
+	public ResponseEntity<?> retrieveUser(@RequestHeader("token") String token, HttpServletRequest request) {
+
+		UserDetails user = userService.retrieveUser(token, request);
+
+		if (user!=null)
+		{
+			return new ResponseEntity<UserDetails>(user, HttpStatus.FOUND);
+		}
+			return new ResponseEntity<String>("Please enter the value user id or verify your login", HttpStatus.NOT_FOUND);
+	}
+	
+		
+	@GetMapping(value = "verifyemail/{emailId:.+}")
+	public ResponseEntity<?> verifyEmail(@RequestHeader("token") String token,@PathVariable("emailId") String emailId, HttpServletRequest request) {
+		UserDetails newUser=userService.verifyEmail(token,emailId,request);
+		if (newUser!=null)
+			return new ResponseEntity<UserDetails>(newUser,HttpStatus.OK);
+		return new ResponseEntity<String>("user not found", HttpStatus.NOT_FOUND);
+	}
+		
+//
+//	//method for uploading single file
+//    @PostMapping(value = "uploadfile")
+//    public ResponseEntity<?> uploadFile(String token, @RequestParam("file") MultipartFile file, HttpServletRequest request) throws IOException {
+//    	UserDetails user = userService.fileUpload(token, file, request);
+//    	if(user !=null) {
+//    		return new ResponseEntity<Void>(HttpStatus.OK);
+//    	}
+//    	return new ResponseEntity<String>("Unable to upload the file", HttpStatus.CONFLICT);
+//        
+//    }
+	@PostMapping(value = "photo/{token:.+}")
+	public ResponseEntity<?> storeFile(@RequestParam("file") MultipartFile file, @PathVariable("token") String token, HttpServletRequest request)
+			throws IOException {
+//		 UserDetails user = userService.store(file,token, request);
+		if (userService.store(file,token, request))
+			return new ResponseEntity<Void>(HttpStatus.OK);
+		return new ResponseEntity<String>("Unable to get the users", HttpStatus.CONFLICT);
+	}
+	
+	@GetMapping(value="photo")
+    public ResponseEntity<?> downloadFile(@RequestHeader("token") String token, HttpServletRequest request) {
+        UserDetails user = userService.getFile(token,request);
+        if(user!=null)
+			return new ResponseEntity<UserDetails>(user,HttpStatus.OK);
+        return new ResponseEntity<String>("Couldnot download the image", HttpStatus.CONFLICT);
+    }
+	
+	@DeleteMapping(value="photo")
+    public ResponseEntity<?> deleteFile(@RequestHeader("token") String token, HttpServletRequest request) {
+		UserDetails user = userService.deleteFile(token,request);
+        if(user!=null)
+			return new ResponseEntity<Void>(HttpStatus.OK);
+        return new ResponseEntity<String>("Couldnot delete the image", HttpStatus.CONFLICT);
+    }
+	
+	@GetMapping("getcollaborateduser/{userId}")
+    public ResponseEntity<?> getCollaboratedUser(@PathVariable("userId") int userId) {
+		UserDetails user = userService.getCollaboratedUser(userId);
+        if(user!=null)
+			return new ResponseEntity<UserDetails		>(user,HttpStatus.OK);
+        return new ResponseEntity<String>("Couldnot delete the image", HttpStatus.CONFLICT);
+    }		
+	
+	@GetMapping(value = "allusers")
+	public ResponseEntity<?> allUsers(HttpServletRequest request) {
+		List<UserDetails> users = userService.allUsers(request);
+		if (!users.isEmpty())
+			return new ResponseEntity<List<UserDetails>>(users, HttpStatus.OK);
+		return new ResponseEntity<String>("couldnot reset the password", HttpStatus.NOT_FOUND);
+	}
+
+}
